@@ -7,8 +7,17 @@
 #include <math.h>
 
 /* we need these includes for CUDA's random number stuff */
+#include <cuda.h>
 #include <curand.h>
 #include <curand_kernel.h>
+
+#define CUDA_CALL(x) do { if((x) != cudaSuccess) { \
+    printf("Error at %s:%d\n",__FILE__,__LINE__); \
+    return EXIT_FAILURE;}} while(0)
+#define CURAND_CALL(x) do { if((x)!=CURAND_STATUS_SUCCESS) { \
+    printf("Error at %s:%d\n",__FILE__,__LINE__);\
+    return EXIT_FAILURE;}} while(0)
+
 
 #define THREADS_P_BLOCK 128
 
@@ -76,19 +85,19 @@ __global__ void printmat(float *t, int N){
     printf("\n");
 }
 
-__global__ void update_trail(float *t, int N, int N_ANTS, int* d_sol, int* sum){
+__global__ void update_trail(float *t, int N, int N_ANTS, int N_EDGES, int* d_sol, int* sum){
     int index = blockIdx.x * blockDim.x + threadIdx.x;
     int stride = blockDim.x * gridDim.x;
     for (int i = index; i < N_ANTS; i += stride){
         int ant_id = i;
-        int *sol = &d_sol[ant_id*N];
+        int *sol = &d_sol[ant_id*N_EDGES];
         
         // for(int idx_sol = 0; idx_sol < N; idx_sol++){
         //     printf("%i ", sol[idx_sol]);
         // }
 
         // printf("\n");
-        for(int idx_sol = 1; idx_sol < N; idx_sol++){
+        for(int idx_sol = 1; idx_sol < N_EDGES; idx_sol++){
             if(sol[idx_sol] == -1){
                 break;
             }
@@ -100,16 +109,24 @@ __global__ void update_trail(float *t, int N, int N_ANTS, int* d_sol, int* sum){
     }
 }
 
-__global__ void ant(curandState_t* states, float *t, int *g, int N, int N_ANTS, int init, int *d_sol, int *d_sum, int *d_visited){
+__device__ int randChoice(curandState_t *state, float *prob, int N){
+    float c = curand_uniform(state);
+    float cum = 0;
+    for(int i = 0; i < N; i++){
+        if(c < prob[i] + cum) return i;
+        cum += prob[i];
+    }
+    return -1;
+}
+
+__global__ void ant(curandState_t* states, float *t, int *g, int N, int N_ANTS,int N_EDGES, int init, int *d_sol, int *d_sum, int *d_visited){
     int index = blockIdx.x * blockDim.x + threadIdx.x;
     int stride = blockDim.x * gridDim.x;
     for (int ant_id = index; ant_id < N_ANTS; ant_id += stride){
 
         // int ant_id = i;
         int *visited = &(d_visited[ant_id*N]);
-        int *sol = &(d_sol[ant_id*N]);
-        
-        
+        int *sol = &(d_sol[ant_id*N_EDGES]);
         
         int now_node = init;
         int end = 0;
@@ -120,22 +137,24 @@ __global__ void ant(curandState_t* states, float *t, int *g, int N, int N_ANTS, 
         
         sol[sol_idx] = now_node;
         visited[now_node] = 1;
-        
-        
+        d_sum[ant_id] = 0;
+
         
         while(end == 0){
             sol_idx++;
-            
+            // printf("\nNOW NODE: %i\nValid Neigs: ",now_node);
             //Calc Probs
             end = 1;
             float norm = 0;
             for(int neigh = 0; neigh < N; neigh ++){
                 probs[neigh] = 0;
                 if(g[now_node*N + neigh] > 0 && visited[neigh] == 0){
+                    
                     float Tij = t[now_node*N + neigh];
                     float Nij = (float)g[now_node*N + neigh] / (float)MAX_WEIGHT;
                     
                     float res = pow(Tij, alpha) * pow(Nij, beta);
+                    // printf("%i [%.2f, %.2f, %.2f], ", neigh, Tij, Nij, res);
                     
                     probs[neigh] = res;
                     norm += res;
@@ -149,30 +168,44 @@ __global__ void ant(curandState_t* states, float *t, int *g, int N, int N_ANTS, 
             //Norm probs to sum 1
             if(end) break;
             
-            int idx = 0;
             for(int neigh = 0; neigh < N; neigh ++){ 
-                probs[neigh] = (probs[neigh] / norm) * 100;
-                
-                for(int h = 0; h < (int)probs[neigh]; h++ ){
-                    choices[h + idx] = neigh;
-                }
-                idx += (int)probs[neigh];
+                probs[neigh] = (probs[neigh] / norm);
             }
+
+            // int idx = 0;
+            // for(int neigh = 0; neigh < N; neigh ++){ 
+            //     probs[neigh] = (probs[neigh] / norm) * 100;
+                
+            //     for(int h = 0; h < (int)probs[neigh]; h++ ){
+            //         choices[h + idx] = neigh;
+            //     }
+            //     idx += (int)probs[neigh];
+            // }
+            // for(int h = 0; h < 100; h++){
+            //     printf("%i ", choices[h]);
+            // }
+            // printf("\n")    ;
+        
+            // // Select random neigh
+            // int c = curand(&states[blockIdx.x]) % 100;
+            // int target = choices[c];
             
-            // Select random neigh
-            int c = curand(&states[blockIdx.x]) % 100;
-            int target = choices[c];
-            
+            int target = randChoice(&states[blockIdx.x], probs, N);
+            // if(target == -1){
+            //     printf("FUCK");
+            // }
             d_sum[ant_id] += g[now_node*N + target];
             
             sol[sol_idx] = target;
             visited[target] = 1;
+
+            // printf("SELECTED: %i\n", target);
             
             now_node = target;
             
-
         }
 
+        // printf("END IN %i SOL LEN %i\n", now_node, sol_idx);
         // if(d_sum[ant_id] >= 177){
         //     printf("------------------------------------------------\n[");
         //     for(int idx_sol = 0; idx_sol < N; idx_sol++){
@@ -190,14 +223,20 @@ __global__ void ant(curandState_t* states, float *t, int *g, int N, int N_ANTS, 
 
 int main() {
     
-
-    
-    std::ifstream infile("bases_grafos/entrada1.txt");
+    std::ifstream infile("bases_grafos/entrada3.txt");
     std::vector<std::vector<int>> adjList;
-    int n1, n2, w;
+    
     int N = 0;
+    int N_EDGES = 0;
+    int N_ITER = 100;
+    int N_ANTS = 100;
+    float EVAP = 0.2;
+        
+    
+    int n1, n2, w;
     while (infile >> n1 >> n2 >> w)
     {
+        N_EDGES++;
         if(n1 > N) N = n1;
         if(n2 > N) N = n2;
         adjList.push_back(std::vector<int>({n1-1, n2-1, w}));
@@ -205,10 +244,6 @@ int main() {
 
     std::cout << "Diff " <<  N << std::endl;
 
-    int N_ITER = 100;
-    int N_ANTS = 100;
-    float EVAP = 0.2;
-    
     
     // Pointers
     float *d_t;
@@ -224,15 +259,15 @@ int main() {
     g = (int *)malloc(N * N * sizeof(int));
     // t = (float *)malloc(N * N * sizeof(float));
 
-    sol = (int *)malloc(N * N_ANTS * sizeof(int));
+    sol = (int *)malloc(N_EDGES * N_ANTS * sizeof(int));
     sum = (int *)malloc(N_ANTS * sizeof(int));
    
-    best_sol = (int *)malloc(N * sizeof(int));
+    best_sol = (int *)malloc(N_EDGES * sizeof(int));
     
     // Device Array
     gpuErrchk(cudaMalloc(&d_t, N * N * sizeof(float)));
     gpuErrchk(cudaMalloc(&d_g, N * N * sizeof(int)));
-    gpuErrchk(cudaMalloc(&d_sol, N * N_ANTS * sizeof(int)));  // solutions
+    gpuErrchk(cudaMalloc(&d_sol, N_EDGES * N_ANTS * sizeof(int)));  // solutions
     gpuErrchk(cudaMalloc(&d_visited, N * N_ANTS * sizeof(int)));  // solutions
     gpuErrchk(cudaMalloc(&d_sum, N_ANTS * sizeof(int)));  // sums
     
@@ -251,10 +286,9 @@ int main() {
 
     // Setup Random Number Generator
     curandState_t* states;
-    gpuErrchk(cudaMalloc((void**) &states, N_ANTS * sizeof(curandState_t)));
-    rand_init<<<N_ANTS, 1>>>(time(0), states);
-    
-    
+    gpuErrchk(cudaMalloc((void**) &states, nnBlocks * sizeof(curandState_t)));
+    rand_init<<<nnBlocks, 1>>>(time(0), states);
+  
     
     for(int initial_node = 0; initial_node < N; initial_node ++){
         
@@ -263,64 +297,77 @@ int main() {
         reset_float<<<nnBlocks, THREADS_P_BLOCK>>>(d_t, N*N, 1.0);
         gpuErrchk( cudaDeviceSynchronize() );
 
-
+        
         for(int iter = 0; iter < N_ITER; iter++){
             // printf("Iter...\n");
             
             // Reset Solutions, Visited list and Sum list
-            reset_int<<<nnBlocks, THREADS_P_BLOCK>>>(d_sol, N * N_ANTS, -1);
+            reset_int<<<nnBlocks, THREADS_P_BLOCK>>>(d_sol, N_EDGES * N_ANTS, -1);
             reset_int<<<nnBlocks, THREADS_P_BLOCK>>>(d_visited, N * N_ANTS, 0);
             reset_int<<<nBlocks, THREADS_P_BLOCK>>>(d_sum, N_ANTS, 0);
             gpuErrchk( cudaDeviceSynchronize() );
             
             // printf("start Ants\n");
             // Run Ants
-            ant<<<nBlocks, THREADS_P_BLOCK>>>(states, d_t, d_g, N, N_ANTS, initial_node, d_sol, d_sum, d_visited);
+            ant<<<nBlocks, THREADS_P_BLOCK>>>(states, d_t, d_g, N, N_ANTS, N_EDGES, initial_node, d_sol, d_sum, d_visited);
             // ant<<<1, 1>>>(states, d_t, d_g, N, N_ANTS, initial_node, d_sol, d_sum, d_visited);
             gpuErrchk( cudaDeviceSynchronize() );
             // printf("End Ants\n");
-
-
+            
+            
             // Evaporate trail
             evaporate<<<nnBlocks, THREADS_P_BLOCK>>>(d_t, EVAP, N*N);
             gpuErrchk( cudaDeviceSynchronize() );
             
             // Update trail
-            update_trail<<<nBlocks, THREADS_P_BLOCK>>>(d_t, N, N_ANTS, d_sol, d_sum);
+            update_trail<<<nBlocks, THREADS_P_BLOCK>>>(d_t, N, N_ANTS, N_EDGES, d_sol, d_sum);
             gpuErrchk( cudaDeviceSynchronize() );
             
             // //Print Trail
             // printmat<<<1, 1>>>(d_t, N);
             // gpuErrchk( cudaDeviceSynchronize() );
-
+            
             // Pull solutions
-            cudaMemcpy(sol, d_sol, N_ANTS*N*sizeof(int), cudaMemcpyDeviceToHost);
+            cudaMemcpy(sol, d_sol, N_ANTS*N_EDGES*sizeof(int), cudaMemcpyDeviceToHost);
             cudaMemcpy(sum, d_sum, N_ANTS*sizeof(int), cudaMemcpyDeviceToHost);
             
             // Save Best Solution
             for(int i = 0; i < N_ANTS; i++){
                 if(sum[i] > best_sum){
                     best_sum = sum[i];
-                    memcpy(best_sol, &sol[i*N], N*sizeof(int));
-                    printf("------------------------------------------------\n[");
-                    for(int idx_sol = 0; idx_sol < N; idx_sol++){
-                        printf("%i, ", best_sol[idx_sol]);
-                    }
-                    printf("] - Value: %i\n", best_sum);
-                    printf("------------------------------------------------\n");
-
+                    memcpy(best_sol, &sol[i*N_EDGES], N_EDGES*sizeof(int));                    
                 }
                 
             }
             
         }
-
-        printf("Best Sol: %i\n", best_sum);
         
+        printf("Best Sol: %i\n", best_sum);
     }
+    
 
+    printf("------------------------------------------------\n[");
+    for(int idx_sol = 0; idx_sol < N_EDGES; idx_sol++){
+        if(best_sol[idx_sol] == -1) break;
+        printf("%i, ", best_sol[idx_sol]);
+    }
+    printf("]\n");
+    printf("------------------------------------------------\n");
     printf("%i\n", best_sum);
 
+    int s = 0;
+    for(int idx_sol = 1; idx_sol < N_EDGES; idx_sol++){
+        int from = best_sol[idx_sol - 1 ];
+        int to = best_sol[idx_sol];
+        if(to == -1) break;
+        s += g[from * N + to];
+    }
+
+    if(s != best_sum){
+        printf("SOLUTION DO NOT MATCH VALUE\n");
+        printf("%i vs %i\n", s, best_sum);
+    }
+    
     cudaFree(d_sol);
     cudaFree(d_sum);
     cudaFree(d_t);
