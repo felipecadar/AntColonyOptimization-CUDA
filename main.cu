@@ -7,6 +7,8 @@
 #include <math.h>
 #include <assert.h>
 #include <string.h>
+#include <filesystem>
+
 
 /* we need these includes for CUDA's random number stuff */
 #include <cuda.h>
@@ -25,6 +27,7 @@ inline void gpuAssert(cudaError_t code, const char *file, int line, bool abort=t
       if (abort) exit(code);
    }
 }
+
 
 /* this GPU kernel function is used to initialize the random states */
 __global__ void rand_init(unsigned int seed, curandState_t* states) {
@@ -201,9 +204,9 @@ void printHelp(){
 int main(int argc, char* argv[]) {
 
     if( argc < 6) printHelp();
-
+    
     std::string database(argv[1]);
-
+    
     
     std::ifstream infile(database);
     std::vector<std::vector<int>> adjList;
@@ -215,7 +218,12 @@ int main(int argc, char* argv[]) {
     float EVAP = atof(argv[4]);
     int alpha = atoi(argv[5]);
     int beta = atoi(argv[6]);
-        
+    
+    int METRICS = 0;
+    std::string exp_id;
+    if( argc > 6)
+        exp_id = std::string(argv[7]);
+        METRICS = 1;    
 
     
     int n1, n2, w;
@@ -228,6 +236,7 @@ int main(int argc, char* argv[]) {
     }
 
     std::cout << "--------------- Config ---------------" << std::endl;
+    std::cout << "Database:         " << database << std::endl;
     std::cout << "N Vertex:         " << N << std::endl;
     std::cout << "N Edges:          " << N_EDGES << std::endl;
     std::cout << "N Ants:           " << N_ANTS  << std::endl;
@@ -236,12 +245,23 @@ int main(int argc, char* argv[]) {
     std::cout << "alpha:            " << alpha << std::endl; 
     std::cout << "beta:             " << beta  << std::endl;
     std::cout << "--------------------------------------" << std::endl << std::endl;
-
-
+    
+    std::ofstream outfile;
+    if(METRICS){
+        outfile.open("results/" + exp_id + ".txt");
+        outfile << "DATABASE " << database << std::endl;
+        outfile << "N " << N << std::endl;
+        outfile << "N_EDGES " << N_EDGES << std::endl;
+        outfile << "N_ANTS " << N_ANTS  << std::endl;
+        outfile << "N_ITER " << N_ITER  << std::endl;
+        outfile << "EVAP " << EVAP  << std::endl;
+        outfile << "alpha " << alpha << std::endl; 
+        outfile << "beta " << beta  << std::endl;
+    }
     
     // Pointers
     float *d_t;
-    // float *t;
+    float *t;
     int *sol, *sum;
     int *d_sol, *d_sum;
     int *d_visited;
@@ -251,7 +271,7 @@ int main(int argc, char* argv[]) {
 
     // Host Array
     g = (int *)malloc(N * N * sizeof(int));
-    // t = (float *)malloc(N * N * sizeof(float));
+    t = (float *)malloc(N * N * sizeof(float));
 
     sol = (int *)malloc(N_EDGES * N_ANTS * sizeof(int));
     sum = (int *)malloc(N_ANTS * sizeof(int));
@@ -301,10 +321,9 @@ int main(int argc, char* argv[]) {
             reset_int<<<nBlocks, THREADS_P_BLOCK>>>(d_sum, N_ANTS, 0);
             gpuErrchk( cudaDeviceSynchronize() );
             
-            // printf("start Ants\n");
             // Run Ants
+            // printf("Start Ants\n");
             ant<<<nBlocks, THREADS_P_BLOCK>>>(states, d_t, d_g, N, N_ANTS, N_EDGES, initial_node, d_sol, d_sum, d_visited, alpha, beta);
-            // ant<<<1, 1>>>(states, d_t, d_g, N, N_ANTS, initial_node, d_sol, d_sum, d_visited);
             gpuErrchk( cudaDeviceSynchronize() );
             // printf("End Ants\n");
             
@@ -315,7 +334,6 @@ int main(int argc, char* argv[]) {
             
             // Update trail
             update_trail<<<nBlocks, THREADS_P_BLOCK>>>(d_t, N, N_ANTS, N_EDGES, d_sol, d_sum);
-            gpuErrchk( cudaDeviceSynchronize() );
             
             // //Print Trail
             // printmat<<<1, 1>>>(d_t, N);
@@ -324,14 +342,39 @@ int main(int argc, char* argv[]) {
             // Pull solutions
             cudaMemcpy(sol, d_sol, N_ANTS*N_EDGES*sizeof(int), cudaMemcpyDeviceToHost);
             cudaMemcpy(sum, d_sum, N_ANTS*sizeof(int), cudaMemcpyDeviceToHost);
+
+            gpuErrchk( cudaDeviceSynchronize() );
             
+            float mean_phero;
+            if(METRICS){
+                cudaMemcpy(t, d_t, N*N*sizeof(float), cudaMemcpyDeviceToHost);
+                mean_phero = 0;
+                for(int i = 0; i < N*N; i++){
+                    mean_phero += t[i];
+                }
+
+                mean_phero = mean_phero / (float)N*N;
+            }
+
+            if(METRICS){
+                outfile << "START_NODE " << initial_node << " ITER " << iter << " MEAN_PHERO " << mean_phero << " : ";
+            }
+
+
             // Save Best Solution
             for(int i = 0; i < N_ANTS; i++){
                 if(sum[i] > best_sum){
                     best_sum = sum[i];
                     memcpy(best_sol, &sol[i*N_EDGES], N_EDGES*sizeof(int));                    
                 }
+
+                if(METRICS){
+                    outfile << sum[i] << " ";
+                }
                 
+            }
+            if(METRICS){
+                outfile << std::endl;
             }
             
         }
@@ -348,6 +391,15 @@ int main(int argc, char* argv[]) {
     printf("]\n");
     printf("------------------------------------------------\n");
     printf("%i\n", best_sum);
+    
+    if(METRICS){
+        for(int idx_sol = 0; idx_sol < N_EDGES; idx_sol++){
+            if(best_sol[idx_sol] == -1) break;
+            outfile << best_sol[idx_sol] << " ";
+        }
+        outfile << std::endl;
+        outfile << best_sum << std::endl;
+    }
 
     int s = 0;
     for(int idx_sol = 1; idx_sol < N_EDGES; idx_sol++){
@@ -367,6 +419,9 @@ int main(int argc, char* argv[]) {
     cudaFree(d_t);
     cudaFree(d_visited);
     cudaFree(d_g);
+
+    if(METRICS)
+        outfile.close();
 
     return 0;
 }
