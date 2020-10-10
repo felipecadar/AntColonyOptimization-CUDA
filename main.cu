@@ -5,24 +5,15 @@
 #include <random>
 #include <unistd.h>
 #include <math.h>
+#include <assert.h>
+#include <string.h>
 
 /* we need these includes for CUDA's random number stuff */
 #include <cuda.h>
 #include <curand.h>
 #include <curand_kernel.h>
 
-#define CUDA_CALL(x) do { if((x) != cudaSuccess) { \
-    printf("Error at %s:%d\n",__FILE__,__LINE__); \
-    return EXIT_FAILURE;}} while(0)
-#define CURAND_CALL(x) do { if((x)!=CURAND_STATUS_SUCCESS) { \
-    printf("Error at %s:%d\n",__FILE__,__LINE__);\
-    return EXIT_FAILURE;}} while(0)
-
-
 #define THREADS_P_BLOCK 128
-
-#define alpha 1
-#define beta 2
 #define MAX_WEIGHT 10
 
 #define gpuErrchk(ans) { gpuAssert((ans), __FILE__, __LINE__); }
@@ -119,7 +110,7 @@ __device__ int randChoice(curandState_t *state, float *prob, int N){
     return -1;
 }
 
-__global__ void ant(curandState_t* states, float *t, int *g, int N, int N_ANTS,int N_EDGES, int init, int *d_sol, int *d_sum, int *d_visited){
+__global__ void ant(curandState_t* states, float *t, int *g, int N, int N_ANTS,int N_EDGES, int init, int *d_sol, int *d_sum, int *d_visited, int alpha, int beta){
     int index = blockIdx.x * blockDim.x + threadIdx.x;
     int stride = blockDim.x * gridDim.x;
     for (int ant_id = index; ant_id < N_ANTS; ant_id += stride){
@@ -163,8 +154,6 @@ __global__ void ant(curandState_t* states, float *t, int *g, int N, int N_ANTS,i
                 }
             }
 
-            // printf("Norm: %f\n", norm);
-            
             //Norm probs to sum 1
             if(end) break;
             
@@ -172,28 +161,10 @@ __global__ void ant(curandState_t* states, float *t, int *g, int N, int N_ANTS,i
                 probs[neigh] = (probs[neigh] / norm);
             }
 
-            // int idx = 0;
-            // for(int neigh = 0; neigh < N; neigh ++){ 
-            //     probs[neigh] = (probs[neigh] / norm) * 100;
-                
-            //     for(int h = 0; h < (int)probs[neigh]; h++ ){
-            //         choices[h + idx] = neigh;
-            //     }
-            //     idx += (int)probs[neigh];
-            // }
-            // for(int h = 0; h < 100; h++){
-            //     printf("%i ", choices[h]);
-            // }
-            // printf("\n")    ;
-        
-            // // Select random neigh
-            // int c = curand(&states[blockIdx.x]) % 100;
-            // int target = choices[c];
-            
+
             int target = randChoice(&states[blockIdx.x], probs, N);
-            // if(target == -1){
-            //     printf("FUCK");
-            // }
+            assert(target >= 0 && target < N);
+
             d_sum[ant_id] += g[now_node*N + target];
             
             sol[sol_idx] = target;
@@ -221,17 +192,31 @@ __global__ void ant(curandState_t* states, float *t, int *g, int N, int N_ANTS,i
     }
 }
 
-int main() {
+void printHelp(){
+    std::cout << std::endl;
+    std::cout << "Usage: ./ACO <input database> <N_ITER> <N_ANTS> <EVAPORATION RATE> <ALPHA> <BETA>" << std::endl;
+    exit(0);
+}
+
+int main(int argc, char* argv[]) {
+
+    if( argc < 6) printHelp();
+
+    std::string database(argv[1]);
+
     
-    std::ifstream infile("bases_grafos/entrada3.txt");
+    std::ifstream infile(database);
     std::vector<std::vector<int>> adjList;
     
     int N = 0;
     int N_EDGES = 0;
-    int N_ITER = 100;
-    int N_ANTS = 100;
-    float EVAP = 0.2;
+    int N_ITER = atoi(argv[2]);
+    int N_ANTS = atoi(argv[3]);
+    float EVAP = atof(argv[4]);
+    int alpha = atoi(argv[5]);
+    int beta = atoi(argv[6]);
         
+
     
     int n1, n2, w;
     while (infile >> n1 >> n2 >> w)
@@ -242,7 +227,16 @@ int main() {
         adjList.push_back(std::vector<int>({n1-1, n2-1, w}));
     }
 
-    std::cout << "Diff " <<  N << std::endl;
+    std::cout << "--------------- Config ---------------" << std::endl;
+    std::cout << "N Vertex:         " << N << std::endl;
+    std::cout << "N Edges:          " << N_EDGES << std::endl;
+    std::cout << "N Ants:           " << N_ANTS  << std::endl;
+    std::cout << "Max Iterations:   " << N_ITER  << std::endl;
+    std::cout << "Evaportation:     " << EVAP  << std::endl;
+    std::cout << "alpha:            " << alpha << std::endl; 
+    std::cout << "beta:             " << beta  << std::endl;
+    std::cout << "--------------------------------------" << std::endl << std::endl;
+
 
     
     // Pointers
@@ -309,7 +303,7 @@ int main() {
             
             // printf("start Ants\n");
             // Run Ants
-            ant<<<nBlocks, THREADS_P_BLOCK>>>(states, d_t, d_g, N, N_ANTS, N_EDGES, initial_node, d_sol, d_sum, d_visited);
+            ant<<<nBlocks, THREADS_P_BLOCK>>>(states, d_t, d_g, N, N_ANTS, N_EDGES, initial_node, d_sol, d_sum, d_visited, alpha, beta);
             // ant<<<1, 1>>>(states, d_t, d_g, N, N_ANTS, initial_node, d_sol, d_sum, d_visited);
             gpuErrchk( cudaDeviceSynchronize() );
             // printf("End Ants\n");
