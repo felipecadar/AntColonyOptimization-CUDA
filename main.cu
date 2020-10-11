@@ -107,7 +107,7 @@ __device__ int randChoice(curandState_t *state, float *prob, int N){
     float c = curand_uniform(state);
     float cum = 0;
     for(int i = 0; i < N; i++){
-        if(c < prob[i] + cum) return i;
+        if(c <= prob[i] + cum) return i;
         cum += prob[i];
     }
     return -1;
