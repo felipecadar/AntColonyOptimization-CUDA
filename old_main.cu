@@ -7,8 +7,8 @@
 #include <math.h>
 #include <assert.h>
 #include <string.h>
-#include <mutex>
-#include <omp.h>
+
+
 
 /* we need these includes for CUDA's random number stuff */
 #include <cuda.h>
@@ -251,7 +251,6 @@ int main(int argc, char* argv[]) {
     std::cout << "--------------------------------------" << std::endl << std::endl;
     
     std::ofstream outfile;
-    std::mutex outfile_mutex;
     if(METRICS){
         outfile.open("results/" + exp_id + ".txt");
         outfile << "DATABASE " << database << std::endl;
@@ -263,111 +262,96 @@ int main(int argc, char* argv[]) {
         outfile << "alpha " << alpha << std::endl; 
         outfile << "beta " << beta  << std::endl;
     }
+    
+    // Pointers
+    float *d_t;
+    float *t;
+    int *sol, *sum;
+    int *d_sol, *d_sum;
+    int *d_visited;
+    int *d_g, *g;
+    int *best_sol;
+    int best_sum = 0;
 
-
-    int nnBlocks = ((N*N) / THREADS_P_BLOCK) + 1;
-    int nBlocks = (N / THREADS_P_BLOCK) + 1;
-
-    int *best_do_best_sol;
-    int *best_do_best_sum;
-
-    best_do_best_sol = (int *)malloc(N_EDGES * N * sizeof(int));
-    best_do_best_sum = (int *)malloc(N * sizeof(int));
-
-    // Populate Graph
-    int *g;
+    // Host Array
     g = (int *)malloc(N * N * sizeof(int));
+    t = (float *)malloc(N * N * sizeof(float));
+
+    sol = (int *)malloc(N_EDGES * N_ANTS * sizeof(int));
+    sum = (int *)malloc(N_ANTS * sizeof(int));
+   
+    best_sol = (int *)malloc(N_EDGES * sizeof(int));
+    
+    // Device Array
+    gpuErrchk(cudaMalloc(&d_t, N * N * sizeof(float)));
+    gpuErrchk(cudaMalloc(&d_g, N * N * sizeof(int)));
+    gpuErrchk(cudaMalloc(&d_sol, N_EDGES * N_ANTS * sizeof(int)));  // solutions
+    gpuErrchk(cudaMalloc(&d_visited, N * N_ANTS * sizeof(int)));  // solutions
+    gpuErrchk(cudaMalloc(&d_sum, N_ANTS * sizeof(int)));  // sums
+    
+    // Populate Graph
     for(auto it = std::begin(adjList); it != std::end(adjList); ++it) {
         int i = (*it)[0];
         int j = (*it)[1];
         int w = (*it)[2];
         g[(i*N)+j] = w;
     }
-    
-    int *d_g;
-    gpuErrchk(cudaMalloc(&d_g, N * N * sizeof(int)));
+
     gpuErrchk(cudaMemcpy(d_g, g, N*N*sizeof(int), cudaMemcpyHostToDevice));
+    
+    int nnBlocks = ((N*N) / THREADS_P_BLOCK) + 1;
+    int nBlocks = (N / THREADS_P_BLOCK) + 1;
 
-
-    #pragma omp parallel for
+    // Setup Random Number Generator
+    curandState_t* states;
+    gpuErrchk(cudaMalloc((void**) &states, nnBlocks * sizeof(curandState_t)));
+    rand_init<<<nnBlocks, 1>>>(time(0), states);
+  
+    
     for(int initial_node = 0; initial_node < N; initial_node ++){
-        int cpuid = omp_get_thread_num();
-        cudaSetDevice(cpuid);
-        printf("------- %i --------\n", cpuid);
-
-        //create stream 
-        cudaStream_t stream1;
-        cudaStreamCreate(&stream1);
-
-        // Pointers
-        float *d_t;
-        float *t;
-        int *sol, *sum;
-        int *d_sol, *d_sum;
-        int *d_visited;
-        int *best_sol;
-        int best_sum = 0;
-
-        // Host Array
-        t = (float *)malloc(N * N * sizeof(float));
-        sol = (int *)malloc(N_EDGES * N_ANTS * sizeof(int));
-        sum = (int *)malloc(N_ANTS * sizeof(int));
-        best_sol = (int *)malloc(N_EDGES * sizeof(int));
-        
-        // Device Array
-        gpuErrchk(cudaMalloc(&d_t, N * N * sizeof(float)));
-        gpuErrchk(cudaMalloc(&d_sol, N_EDGES * N_ANTS * sizeof(int)));  // solutions
-        gpuErrchk(cudaMalloc(&d_visited, N * N_ANTS * sizeof(int)));  // solutions
-        gpuErrchk(cudaMalloc(&d_sum, N_ANTS * sizeof(int)));  // sums
-        
-
-        // Setup Random Number Generator
-        curandState_t* states;
-        gpuErrchk(cudaMalloc((void**) &states, nnBlocks * sizeof(curandState_t)));
-        rand_init<<<nnBlocks, 1, 0, stream1>>>(time(0), states);
         
         printf("Starting with node %i: \n", initial_node);
         
-        reset_float<<<nnBlocks, THREADS_P_BLOCK, 0, stream1>>>(d_t, N*N, 1.0);
+        reset_float<<<nnBlocks, THREADS_P_BLOCK>>>(d_t, N*N, 1.0);
         gpuErrchk( cudaDeviceSynchronize() );
-        
 
+        
         for(int iter = 0; iter < N_ITER; iter++){
             // printf("Iter...\n");
             
             // Reset Solutions, Visited list and Sum list
-            reset_int<<<nnBlocks, THREADS_P_BLOCK, 0, stream1>>>(d_sol, N_EDGES * N_ANTS, -1);
-            reset_int<<<nnBlocks, THREADS_P_BLOCK, 0, stream1>>>(d_visited, N * N_ANTS, 0);
-            reset_int<<<nBlocks, THREADS_P_BLOCK, 0, stream1>>>(d_sum, N_ANTS, 0);
+            reset_int<<<nnBlocks, THREADS_P_BLOCK>>>(d_sol, N_EDGES * N_ANTS, -1);
+            reset_int<<<nnBlocks, THREADS_P_BLOCK>>>(d_visited, N * N_ANTS, 0);
+            reset_int<<<nBlocks, THREADS_P_BLOCK>>>(d_sum, N_ANTS, 0);
             gpuErrchk( cudaDeviceSynchronize() );
             
             // Run Ants
             // printf("Start Ants\n");
-            ant<<<nBlocks, THREADS_P_BLOCK, 0, stream1>>>(states, d_t, d_g, N, N_ANTS, N_EDGES, initial_node, d_sol, d_sum, d_visited, alpha, beta);
+            ant<<<nBlocks, THREADS_P_BLOCK>>>(states, d_t, d_g, N, N_ANTS, N_EDGES, initial_node, d_sol, d_sum, d_visited, alpha, beta);
             gpuErrchk( cudaDeviceSynchronize() );
             // printf("End Ants\n");
             
             
             // Evaporate trail
-            evaporate<<<nnBlocks, THREADS_P_BLOCK, 0, stream1>>>(d_t, EVAP, N*N);
+            evaporate<<<nnBlocks, THREADS_P_BLOCK>>>(d_t, EVAP, N*N);
             gpuErrchk( cudaDeviceSynchronize() );
             
             // Update trail
-            update_trail<<<nBlocks, THREADS_P_BLOCK, 0, stream1>>>(d_t, N, N_ANTS, N_EDGES, d_sol, d_sum);
+            update_trail<<<nBlocks, THREADS_P_BLOCK>>>(d_t, N, N_ANTS, N_EDGES, d_sol, d_sum);
             
             // //Print Trail
-            // printmat<<<1, 1, 0, stream1>>>(d_t, N);
+            // printmat<<<1, 1>>>(d_t, N);
             // gpuErrchk( cudaDeviceSynchronize() );
             
             // Pull solutions
-            cudaMemcpyAsync(sol, d_sol, N_ANTS*N_EDGES*sizeof(int), cudaMemcpyDeviceToHost, stream1);
-            cudaMemcpyAsync(sum, d_sum, N_ANTS*sizeof(int), cudaMemcpyDeviceToHost, stream1);
+            cudaMemcpy(sol, d_sol, N_ANTS*N_EDGES*sizeof(int), cudaMemcpyDeviceToHost);
+            cudaMemcpy(sum, d_sum, N_ANTS*sizeof(int), cudaMemcpyDeviceToHost);
 
             gpuErrchk( cudaDeviceSynchronize() );
             
             float mean_phero;
             if(METRICS){
-                cudaMemcpyAsync(t, d_t, N*N*sizeof(float), cudaMemcpyDeviceToHost, stream1);
+                cudaMemcpy(t, d_t, N*N*sizeof(float), cudaMemcpyDeviceToHost);
                 mean_phero = 0;
                 for(int i = 0; i < N*N; i++){
                     mean_phero += t[i];
@@ -377,13 +361,9 @@ int main(int argc, char* argv[]) {
             }
 
             if(METRICS){
-                outfile_mutex.lock();
                 outfile << "START_NODE " << initial_node << " ITER " << iter << " MEAN_PHERO " << mean_phero << " : ";
-                outfile_mutex.unlock();
             }
-            
-            if(METRICS)
-                outfile_mutex.lock();
+
 
             // Save Best Solution
             for(int i = 0; i < N_ANTS; i++){
@@ -391,7 +371,7 @@ int main(int argc, char* argv[]) {
                     best_sum = sum[i];
                     memcpy(best_sol, &sol[i*N_EDGES], N_EDGES*sizeof(int));                    
                 }
-                
+
                 if(METRICS){
                     outfile << sum[i] << " ";
                 }
@@ -400,50 +380,10 @@ int main(int argc, char* argv[]) {
             if(METRICS){
                 outfile << std::endl;
             }
-
-            if(METRICS)
-                outfile_mutex.unlock();
             
         }
-
-        // printf("------------------------------------------------\n[");
-        // for(int idx_sol = 0; idx_sol < N_EDGES; idx_sol++){
-        //     if(best_sol[idx_sol] == -1) break;
-        //     printf("%i, ", best_sol[idx_sol]);
-        // }
-        // printf("]\n");
-        // printf("------------------------------------------------\n");
-        // printf("%i\n", best_sum);
-
-        memcpy(&best_do_best_sol[initial_node * N_EDGES], best_sol, N_EDGES*sizeof(int));
-        best_do_best_sum[initial_node] = best_sum;        
-
-        printf("[End from node %i] - Best Sol: %i\n", initial_node, best_sum);
-
-        cudaFree(d_sol);
-        cudaFree(d_sum);
-        cudaFree(d_t);
-        cudaFree(d_visited);
-
-        free(sol);
-        free(sum);
-        free(best_sol);
-
-        //end stream
-        cudaStreamDestroy(stream1);
-    }
-
-    // Get best general solution
-    int *best_sol;
-    int best_sum = 0;
-
-    best_sol = (int *)malloc(N_EDGES * sizeof(int));
-
-    for(int i = 0; i < N; i++){
-        if (best_do_best_sum[i] > best_sum){
-            best_sum = best_do_best_sum[i];
-            memcpy(best_sol, &best_do_best_sol[i*N_EDGES], N_EDGES*sizeof(int));                    
-        }
+        
+        printf("Best Sol: %i\n", best_sum);
     }
     
 
@@ -478,16 +418,14 @@ int main(int argc, char* argv[]) {
         printf("%i vs %i\n", s, best_sum);
     }
     
-
+    cudaFree(d_sol);
+    cudaFree(d_sum);
+    cudaFree(d_t);
+    cudaFree(d_visited);
+    cudaFree(d_g);
 
     if(METRICS)
         outfile.close();
-
-    free(best_do_best_sol);
-    free(best_do_best_sum);
-    free(best_sol);
-    free(g);
-    cudaFree(d_g);
 
     return 0;
 }
