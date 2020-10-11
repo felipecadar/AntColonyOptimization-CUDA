@@ -246,6 +246,7 @@ int main(int argc, char* argv[]) {
     std::cout << "Evaportation:     " << EVAP  << std::endl;
     std::cout << "alpha:            " << alpha << std::endl; 
     std::cout << "beta:             " << beta  << std::endl;
+    std::cout << "Exp:              " << exp_id  << std::endl;
     std::cout << "--------------------------------------" << std::endl << std::endl;
     
     std::ofstream outfile;
