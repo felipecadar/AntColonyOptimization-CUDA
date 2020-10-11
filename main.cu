@@ -235,6 +235,8 @@ int main(int argc, char* argv[]) {
         adjList.push_back(std::vector<int>({n1-1, n2-1, w}));
     }
 
+    infile.close();
+
     std::cout << "--------------- Config ---------------" << std::endl;
     std::cout << "Database:         " << database << std::endl;
     std::cout << "N Vertex:         " << N << std::endl;
