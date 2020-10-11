@@ -127,7 +127,7 @@ __global__ void ant(curandState_t* states, float *t, int *g, int N, int N_ANTS,i
         int sol_idx = 0;
         
         float *probs = new float[N];
-        int *choices = new int[100];
+        // int *choices = new int[100];
         
         sol[sol_idx] = now_node;
         visited[now_node] = 1;
@@ -190,7 +190,7 @@ __global__ void ant(curandState_t* states, float *t, int *g, int N, int N_ANTS,i
         // }
         
         free(probs);
-        free(choices);
+        // free(choices);
 
     }
 }
