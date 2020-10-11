@@ -1,3 +1,5 @@
 ACO
 results/
 *.sh
+a.out
+ACO_parallel

@@ -110,8 +110,7 @@ __device__ int randChoice(curandState_t *state, float *prob, int N){
         if(c <= prob[i] + cum) return i;
         cum += prob[i];
     }
-    printf("THIS MF FAIL AGAIN AAAA\n\n SUM %f c %f", cum, c);
-    return -1;
+    return N-1;
 }
 
 __global__ void ant(curandState_t* states, float *t, int *g, int N, int N_ANTS,int N_EDGES, int init, int *d_sol, int *d_sum, int *d_visited, int alpha, int beta){
