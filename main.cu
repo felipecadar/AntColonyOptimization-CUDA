@@ -375,15 +375,13 @@ int main(int argc, char* argv[]) {
                 mean_phero = mean_phero / (float)N*N;
             }
 
-            if(METRICS){
-                outfile_mutex.lock();
-                outfile << "START_NODE " << initial_node << " ITER " << iter << " MEAN_PHERO " << mean_phero << " : ";
-                outfile_mutex.unlock();
-            }
-            
             if(METRICS)
                 outfile_mutex.lock();
 
+            if(METRICS){
+                outfile << "START_NODE " << initial_node << " ITER " << iter << " MEAN_PHERO " << mean_phero << " : ";
+            }
+            
             // Save Best Solution
             for(int i = 0; i < N_ANTS; i++){
                 if(sum[i] > best_sum){
