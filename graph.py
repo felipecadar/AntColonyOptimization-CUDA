@@ -46,7 +46,7 @@ def read_exp(fname):
             
             ITER = int(ITER)
             START_NODE = int(START_NODE)
-            MEAN_PHERO = int(MEAN_PHERO)
+            MEAN_PHERO = float(MEAN_PHERO)
 
             mean_phero[START_NODE, ITER] = MEAN_PHERO
             all_solutions[START_NODE, ITER] = np.fromstring(s.strip(), sep=' ')
@@ -57,5 +57,80 @@ def read_exp(fname):
         return all_solutions, mean_phero, best_sol, best_sum, params
 
 if __name__ == "__main__":
-    fname = "/home/cadar/Documents/cuda_aco/exp.txt"
-    exp = read_exp(fname)
+
+    colors = ["#0F54FF","#e41a1c","#984ea3","#377eb8","#ff7f00","#f781bf","#0FD0FF","#a65628","#dede00"]
+    
+    ## Exp params
+    bases = ["bases_grafos/entrada1.txt" , "bases_grafos/entrada2.txt"]
+    n_iter = [10, 50, 100, 200]
+    n_ants = [10, 50, 200, 300]
+    evap = [0.1, 0.3, 0.5, 0.7, 0.9]
+    alpha = [0, 1, 2, 3]
+    beta = [0, 1, 2, 3]
+    REP = range(30)
+
+    ##################### Exp
+
+    exp_name = "exp_N-ANTS"
+    for database in bases:
+        plt.figure() ## Create Figure
+    
+        dbname = database.split("/")[-1].split(".")[0]
+        b_plot = []
+        for idx, var in enumerate(n_ants):
+            
+            mean_best_sol = np.zeros(len(REP))
+
+            for i in REP:
+                exp_id = "TEST_PLOT/exp_N-ANTS_database-{}_rep-{:02d}_var-{:03d}.txt".format(dbname, i, var)
+                try:
+                    all_solutions, mean_phero, best_sol, best_sum, params = read_exp(exp_id)
+                except:
+                    print(exp_id)
+
+                mean_best_sol[i] = best_sum
+
+                # plt.scatter(x = idx ,y=best_sum, color=colors[idx % len(colors)], alpha=0.3)
+            
+            # plt.scatter(x = idx ,y=np.mean(mean_best_sol), color=colors[idx % len(colors)], label=var)
+            b_plot.append(mean_best_sol)
+
+        plt.boxplot(b_plot, labels=n_ants)
+
+        plt.title(exp_name + " - " + dbname)
+        plt.xlabel("Número de Formigas")
+        plt.ylabel("Valor da solução")
+        plt.show()
+
+    exit()
+    ##################### Exp 
+    exp_name = "exp_N-ITER"
+    for database in bases:
+        dbname = database.split("/")[-1].split(".")[0]
+        for var in n_iter:
+            for i in REP:
+                exp_id = "results/exp_N-ITER_database-{}_rep-{:02d}_var-{:03d}.txt".format(dbname, i, var)
+
+    ##################### Exp 
+    exp_name = "exp_ALPHA"
+    for database in bases:
+        dbname = database.split("/")[-1].split(".")[0]
+        for var in alpha:
+            for i in REP:
+                exp_id = "results/exp_ALPHA_database-{}_rep-{:02d}_var-{:03d}.txt".format(dbname, i, var)
+
+    ##################### Exp 
+    exp_name = "exp_BETA"
+    for database in bases:
+        dbname = database.split("/")[-1].split(".")[0]
+        for var in beta:
+            for i in REP:
+                exp_id = "results/exp_BETA_database-{}_rep-{:02d}_var-{:03d}.txt".format(dbname, i, var)
+
+    ##################### Exp 
+    exp_name = "exp_EVAP"
+    for database in bases:
+        dbname = database.split("/")[-1].split(".")[0]
+        for var in evap:
+            for i in REP:
+                exp_id = "results/exp_EVAP_database-{}_rep-{:02d}_var-{:.1f}.txt".format(dbname, i, var)

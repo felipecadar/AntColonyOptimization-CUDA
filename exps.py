@@ -18,6 +18,8 @@ def checkfile(exp_id):
         line = line.decode("utf-8")
         if "START" in line:
             return False
+        if len(line) < 20:
+            return False
 
         return True
     else:
