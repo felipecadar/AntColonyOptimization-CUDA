@@ -95,9 +95,9 @@ for database in bases:
                 else:
                     exp_file.write(cmd)
 if not ONLYCHECK: exp_file.close()
-if (c == t): print(bcolors.OKGREEN)
+if (c == t): print(bcolors.OKGREEN, end="")
 print("[{:10}] - {} of {}".format(exp_name, c, t))
-if (c == t): print(bcolors.ENDC)
+if (c == t): print(bcolors.ENDC, end="")
 ##################### Exp 
 c = 0
 t = 0
@@ -119,9 +119,9 @@ for database in bases:
                 else:
                     exp_file.write(cmd)
 if not ONLYCHECK: exp_file.close()
-if (c == t): print(bcolors.OKGREEN)
+if (c == t): print(bcolors.OKGREEN, end="")
 print("[{:10}] - {} of {}".format(exp_name, c, t))
-if (c == t): print(bcolors.ENDC)
+if (c == t): print(bcolors.ENDC, end="")
 ##################### Exp 
 c = 0
 t = 0
@@ -143,9 +143,9 @@ for database in bases:
                 else:
                     exp_file.write(cmd)
 if not ONLYCHECK: exp_file.close()
-if (c == t): print(bcolors.OKGREEN)
+if (c == t): print(bcolors.OKGREEN, end="")
 print("[{:10}] - {} of {}".format(exp_name, c, t))
-if (c == t): print(bcolors.ENDC)
+if (c == t): print(bcolors.ENDC, end="")
 ##################### Exp 
 c = 0
 t = 0
@@ -167,6 +167,6 @@ for database in bases:
                 else:
                     exp_file.write(cmd)
 if not ONLYCHECK: exp_file.close()
-if (c == t): print(bcolors.OKGREEN)
+if (c == t): print(bcolors.OKGREEN, end="")
 print("[{:10}] - {} of {}".format(exp_name, c, t))
-if (c == t): print(bcolors.ENDC)
+if (c == t): print(bcolors.ENDC, end="")
