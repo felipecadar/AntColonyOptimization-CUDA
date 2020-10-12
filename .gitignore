@@ -5,3 +5,5 @@ a.out
 ACO_parallel
 ACO_old
 *.txt
+*.png
+__pycache__
