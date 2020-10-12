@@ -4,7 +4,7 @@ This repository contains two implementations of the Ant Colony Optimization algo
 
 ## Visualization
 
-This image represents a graph adjacency matrix. We can cleary see that the pheromone concentrate is a specific path (one square per line)
+This image represents a graph adjacency matrix. We can cleary see that the pheromone concentrates in a specific path (one square per line)
 
 ![gif](aux/out.gif)
 
