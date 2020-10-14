@@ -33,7 +33,7 @@ def read_exp(fname, zf=None):
             return None, None, None, None, None
 
     lines = f.readlines()
-    lines = [x.decode("utf-8") for x in lines]
+    # lines = [x.decode("utf-8") for x in lines]
 
     params["base"] = lines[0].strip().split(" ")[-1].split("/")[-1]
     params["n"] = int(lines[1].strip().split(" ")[-1])
@@ -43,11 +43,11 @@ def read_exp(fname, zf=None):
     params["alpha"] = int(lines[6].strip().split(" ")[-1])
     params["beta"] = int(lines[7].strip().split(" ")[-1])
 
-    results = lines[8: 8 + (params["n"] * params["iter"])]
+    results = lines[8: -2]
 
-    best_sol = lines[8 + (params["n"] * params["iter"])].strip()
+    best_sol = lines[-2].strip()
     best_sol = np.fromstring(best_sol, dtype=np.int, sep=' ')
-    best_sum = int(lines[8 + (params["n"] * params["iter"]) + 1].strip())
+    best_sum = int(lines[-1].strip())
 
     all_solutions = np.zeros([params["n"], params["iter"], params["ants"]])
     mean_phero = np.zeros([params["n"], params["iter"]])
@@ -78,32 +78,32 @@ def read_exp(fname, zf=None):
 if __name__ == "__main__":
 
     colors = ["#0F54FF","#e41a1c","#984ea3","#377eb8","#ff7f00","#f781bf","#0FD0FF","#a65628","#dede00"]
-    zf = ZipFile("results.zip")
+    # zf = ZipFile("results.zip")
+    zf = None
 
     ## Exp params
-    # bases = ["bases_grafos/entrada1.txt"]
     variables = {
         "bases_grafos/entrada1.txt" : {
-            "n_iter" : [10, 50, 100, 200],
+            "n_iter" : [300],
             "n_ants" : [10, 50, 200, 300],
             "evap" : [0.1, 0.3, 0.5, 0.7, 0.9],
             "alpha" : [1, 2, 3],
             "beta" : [1, 2, 3],
         },
-        # "bases_grafos/entrada2.txt" : {
-        #     "n_iter" : [10, 100, 200],
-        #     "n_ants" : [100, 500, 1000, 2000],
-        #     "evap" : [0.1, 0.3, 0.5, 0.7, 0.9],
-        #     "alpha" : [1, 2, 3],
-        #     "beta" : [1, 2, 3],
-        # },
-        # "bases_grafos/entrada3.txt" : {
-        #     "n_iter" : [10, 50, 100, 200],
-        #     "n_ants" : [100, 500, 1000, 2000],
-        #     "evap" : [0.1, 0.3, 0.5, 0.7, 0.9],
-        #     "alpha" : [1, 2, 3],
-        #     "beta" : [1, 2, 3],
-        # },
+        "bases_grafos/entrada2.txt" : {
+            "n_iter" : [300],
+            "n_ants" : [100, 500, 1000, 2000],
+            "evap" : [0.1, 0.3, 0.5, 0.7, 0.9],
+            "alpha" : [1, 2, 3],
+            "beta" : [1, 2, 3],
+        },
+        "bases_grafos/entrada3.txt" : {
+            "n_iter" : [300],
+            "n_ants" : [100, 500, 1000, 2000],
+            "evap" : [0.1, 0.3, 0.5, 0.7, 0.9],
+            "alpha" : [1, 2, 3],
+            "beta" : [1, 2, 3],
+        },
     }
     REP = range(30)
 

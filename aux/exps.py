@@ -39,21 +39,21 @@ def checkfile(exp_id):
 
 variables = {
     "bases_grafos/entrada1.txt" : {
-        "n_iter" : [10, 50, 100, 200],
+        "n_iter" : [300],
         "n_ants" : [10, 50, 200, 300],
         "evap" : [0.1, 0.3, 0.5, 0.7, 0.9],
         "alpha" : [1, 2, 3],
         "beta" : [1, 2, 3],
     },
     "bases_grafos/entrada2.txt" : {
-        "n_iter" : [10, 100, 200],
+        "n_iter" : [300],
         "n_ants" : [100, 500, 1000, 2000],
         "evap" : [0.1, 0.3, 0.5, 0.7, 0.9],
         "alpha" : [1, 2, 3],
         "beta" : [1, 2, 3],
     },
     "bases_grafos/entrada3.txt" : {
-        "n_iter" : [10, 50, 100, 200],
+        "n_iter" : [300],
         "n_ants" : [100, 500, 1000, 2000],
         "evap" : [0.1, 0.3, 0.5, 0.7, 0.9],
         "alpha" : [1, 2, 3],
