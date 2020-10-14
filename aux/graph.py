@@ -13,7 +13,7 @@ def mkdir_p(path):
         else:
             raise
 
-def read_exp(fname, zf):
+def read_exp(fname, zf=None):
     params = {
         "base": "",
         "ants": 0,
@@ -24,49 +24,56 @@ def read_exp(fname, zf):
         "n": 0 
     }
 
-    with zf.open(fname, "r") as f:
-        lines = f.readlines()
-        lines = [x.decode("utf-8") for x in lines]
+    try:
+        f = zf.open(fname, "r")
+    except:
+        try:
+            f = open(fname, "r")
+        except:
+            return None, None, None, None, None
 
-        params["base"] = lines[0].strip().split(" ")[-1].split("/")[-1]
-        params["n"] = int(lines[1].strip().split(" ")[-1])
-        params["ants"] = int(lines[3].strip().split(" ")[-1])
-        params["iter"] = int(lines[4].strip().split(" ")[-1])
-        params["evap"] = float(lines[5].strip().split(" ")[-1])
-        params["alpha"] = int(lines[6].strip().split(" ")[-1])
-        params["beta"] = int(lines[7].strip().split(" ")[-1])
+    lines = f.readlines()
+    lines = [x.decode("utf-8") for x in lines]
 
-        results = lines[8: 8 + (params["n"] * params["iter"])]
+    params["base"] = lines[0].strip().split(" ")[-1].split("/")[-1]
+    params["n"] = int(lines[1].strip().split(" ")[-1])
+    params["ants"] = int(lines[3].strip().split(" ")[-1])
+    params["iter"] = int(lines[4].strip().split(" ")[-1])
+    params["evap"] = float(lines[5].strip().split(" ")[-1])
+    params["alpha"] = int(lines[6].strip().split(" ")[-1])
+    params["beta"] = int(lines[7].strip().split(" ")[-1])
 
-        best_sol = lines[8 + (params["n"] * params["iter"])].strip()
-        best_sol = np.fromstring(best_sol, dtype=np.int, sep=' ')
-        best_sum = int(lines[8 + (params["n"] * params["iter"]) + 1].strip())
+    results = lines[8: 8 + (params["n"] * params["iter"])]
 
-        all_solutions = np.zeros([params["n"], params["iter"], params["ants"]])
-        mean_phero = np.zeros([params["n"], params["iter"]])
+    best_sol = lines[8 + (params["n"] * params["iter"])].strip()
+    best_sol = np.fromstring(best_sol, dtype=np.int, sep=' ')
+    best_sum = int(lines[8 + (params["n"] * params["iter"]) + 1].strip())
 
-        err = 0
-        for line in results:
-            try:
-                p,s = line.strip().split(":")
-            except:
-                err+=1
-                continue
-    
-    
-            _, START_NODE, _ , ITER,_ , MEAN_PHERO = p.strip().split(" ")
-            
-            ITER = int(ITER)
-            START_NODE = int(START_NODE)
-            MEAN_PHERO = float(MEAN_PHERO)
+    all_solutions = np.zeros([params["n"], params["iter"], params["ants"]])
+    mean_phero = np.zeros([params["n"], params["iter"]])
 
-            mean_phero[START_NODE, ITER] = MEAN_PHERO
-            all_solutions[START_NODE, ITER] = np.fromstring(s.strip(), sep=' ')
+    err = 0
+    for line in results:
+        try:
+            p,s = line.strip().split(":")
+        except:
+            err+=1
+            continue
 
-        mean_phero[mean_phero == 0] = np.nan   
-        all_solutions[all_solutions == 0] = np.nan
 
-        return all_solutions, mean_phero, best_sol, best_sum, params
+        _, START_NODE, _ , ITER,_ , MEAN_PHERO = p.strip().split(" ")
+        
+        ITER = int(ITER)
+        START_NODE = int(START_NODE)
+        MEAN_PHERO = float(MEAN_PHERO)
+
+        mean_phero[START_NODE, ITER] = MEAN_PHERO
+        all_solutions[START_NODE, ITER] = np.fromstring(s.strip(), sep=' ')
+
+    mean_phero[mean_phero == 0] = np.nan   
+    all_solutions[all_solutions == 0] = np.nan
+
+    return all_solutions, mean_phero, best_sol, best_sum, params
 
 if __name__ == "__main__":
 
@@ -75,18 +82,35 @@ if __name__ == "__main__":
 
     ## Exp params
     # bases = ["bases_grafos/entrada1.txt"]
-    bases = ["bases_grafos/entrada1.txt" , "bases_grafos/entrada2.txt"]
-    n_iter = [10, 50, 100, 200]
-    n_ants = [10, 50, 200, 300]
-    evap = [0.1, 0.3, 0.5, 0.7, 0.9]
-    alpha = [1, 2, 3]
-    beta = [1, 2, 3]
+    variables = {
+        "bases_grafos/entrada1.txt" : {
+            "n_iter" : [10, 50, 100, 200],
+            "n_ants" : [10, 50, 200, 300],
+            "evap" : [0.1, 0.3, 0.5, 0.7, 0.9],
+            "alpha" : [1, 2, 3],
+            "beta" : [1, 2, 3],
+        },
+        # "bases_grafos/entrada2.txt" : {
+        #     "n_iter" : [10, 100, 200],
+        #     "n_ants" : [100, 500, 1000, 2000],
+        #     "evap" : [0.1, 0.3, 0.5, 0.7, 0.9],
+        #     "alpha" : [1, 2, 3],
+        #     "beta" : [1, 2, 3],
+        # },
+        # "bases_grafos/entrada3.txt" : {
+        #     "n_iter" : [10, 50, 100, 200],
+        #     "n_ants" : [100, 500, 1000, 2000],
+        #     "evap" : [0.1, 0.3, 0.5, 0.7, 0.9],
+        #     "alpha" : [1, 2, 3],
+        #     "beta" : [1, 2, 3],
+        # },
+    }
     REP = range(30)
 
     ##################### Exp
 
     exp_name = "exp_N-ANTS"
-    for database in bases:
+    for database in variables.keys():
         box_fig, box_ax = plt.subplots(figsize=[8,4]) ## Create Figure
         mean_fig, mean_ax = plt.subplots(figsize=[8,4]) ## Create Figure
         best_fig, best_ax = plt.subplots(figsize=[8,4]) ## Create Figure
@@ -95,7 +119,7 @@ if __name__ == "__main__":
         dbname = database.split("/")[-1].split(".")[0]
         mkdir_p("plots/"+dbname)
         box_plot_data = []
-        for idx, var in enumerate(n_ants):
+        for idx, var in enumerate(variables[database]["n_ants"]):
             
             mean_final_sol = np.zeros(len(REP))
 
@@ -128,7 +152,7 @@ if __name__ == "__main__":
 
             box_plot_data.append(mean_final_sol)
 
-        box_ax.boxplot(box_plot_data, labels=n_ants)
+        box_ax.boxplot(box_plot_data, labels=variables[database]["n_ants"])
         box_ax.set_title("Base: " + dbname + " - Distribuição dos resultados finais")
         box_ax.set_xlabel("Número de Formigas")
         box_ax.set_ylabel("Valor da solução")
@@ -160,7 +184,7 @@ if __name__ == "__main__":
 
     ##################### Exp 
     exp_name = "exp_N-ITER"
-    for database in bases:
+    for database in variables.keys():
         box_fig, box_ax = plt.subplots(figsize=[8,4]) ## Create Figure
         mean_fig, mean_ax = plt.subplots(figsize=[8,4]) ## Create Figure
         best_fig, best_ax = plt.subplots(figsize=[8,4]) ## Create Figure
@@ -169,7 +193,7 @@ if __name__ == "__main__":
         dbname = database.split("/")[-1].split(".")[0]
         mkdir_p("plots/"+dbname)
         box_plot_data = []
-        for idx, var in enumerate(n_iter):
+        for idx, var in enumerate(variables[database]["n_iter"]):
             
             mean_final_sol = np.zeros(len(REP))
 
@@ -202,7 +226,7 @@ if __name__ == "__main__":
 
             box_plot_data.append(mean_final_sol)
 
-        box_ax.boxplot(box_plot_data, labels=n_iter)
+        box_ax.boxplot(box_plot_data, labels=variables[database]["n_iter"])
         box_ax.set_title("Base: " + dbname + " - Distribuição dos resultados finais")
         box_ax.set_xlabel("Número de Iterações")
         box_ax.set_ylabel("Valor da solução")
@@ -235,7 +259,7 @@ if __name__ == "__main__":
 
     ##################### Exp 
     exp_name = "exp_ALPHA"
-    for database in bases:
+    for database in variables.keys():
         box_fig, box_ax = plt.subplots(figsize=[8,4]) ## Create Figure
         mean_fig, mean_ax = plt.subplots(figsize=[8,4]) ## Create Figure
         best_fig, best_ax = plt.subplots(figsize=[8,4]) ## Create Figure
@@ -244,7 +268,7 @@ if __name__ == "__main__":
         dbname = database.split("/")[-1].split(".")[0]
         mkdir_p("plots/"+dbname)
         box_plot_data = []
-        for idx, var in enumerate(alpha):
+        for idx, var in enumerate(variables[database]["alpha"]):
             
             mean_final_sol = np.zeros(len(REP))
 
@@ -277,7 +301,7 @@ if __name__ == "__main__":
 
             box_plot_data.append(mean_final_sol)
 
-        box_ax.boxplot(box_plot_data, labels=alpha)
+        box_ax.boxplot(box_plot_data, labels=variables[database]["alpha"])
         box_ax.set_title("Base: " + dbname + " - Distribuição dos resultados finais")
         box_ax.set_xlabel("Valor do Alpha")
         box_ax.set_ylabel("Valor da solução")
@@ -311,7 +335,7 @@ if __name__ == "__main__":
 
     ##################### Exp 
     exp_name = "exp_BETA"
-    for database in bases:
+    for database in variables.keys():
         box_fig, box_ax = plt.subplots(figsize=[8,4]) ## Create Figure
         mean_fig, mean_ax = plt.subplots(figsize=[8,4]) ## Create Figure
         best_fig, best_ax = plt.subplots(figsize=[8,4]) ## Create Figure
@@ -320,7 +344,7 @@ if __name__ == "__main__":
         dbname = database.split("/")[-1].split(".")[0]
         mkdir_p("plots/"+dbname)
         box_plot_data = []
-        for idx, var in enumerate(beta):
+        for idx, var in enumerate(variables[database]["beta"]):
             
             mean_final_sol = np.zeros(len(REP))
 
@@ -353,7 +377,7 @@ if __name__ == "__main__":
 
             box_plot_data.append(mean_final_sol)
 
-        box_ax.boxplot(box_plot_data, labels=beta)
+        box_ax.boxplot(box_plot_data, labels=variables[database]["beta"])
         box_ax.set_title("Base: " + dbname + " - Distribuição dos resultados finais")
         box_ax.set_xlabel("Valor do Beta")
         box_ax.set_ylabel("Valor da solução")
@@ -387,7 +411,7 @@ if __name__ == "__main__":
 
     ##################### Exp 
     exp_name = "exp_EVAP"
-    for database in bases:
+    for database in variables.keys():
         box_fig, box_ax = plt.subplots(figsize=[8,4]) ## Create Figure
         mean_fig, mean_ax = plt.subplots(figsize=[8,4]) ## Create Figure
         best_fig, best_ax = plt.subplots(figsize=[8,4]) ## Create Figure
@@ -397,7 +421,7 @@ if __name__ == "__main__":
         dbname = database.split("/")[-1].split(".")[0]
         mkdir_p("plots/"+dbname)
         box_plot_data = []
-        for idx, var in enumerate(evap):
+        for idx, var in enumerate(variables[database]["evap"]):
             
             mean_final_sol = np.zeros(len(REP))
             all_mean_phero = np.zeros(len(REP))
@@ -429,12 +453,11 @@ if __name__ == "__main__":
             mean_ax.plot(np.mean(mean_sol_p_iter, axis=0), label=var, color=colors[idx % len(colors)])
             best_ax.plot(np.mean(best_sol_p_iter, axis=0), label=var, color=colors[idx % len(colors)])
             worse_ax.plot(np.mean(worse_sol_p_iter, axis=0), label=var, color=colors[idx % len(colors)])
-            worse_ax.plot(np.mean(worse_sol_p_iter, axis=0), label=var, color=colors[idx % len(colors)])
             phero_ax.plot(np.mean(mean_phero_p_iter, axis=0), label=var, color=colors[idx % len(colors)])
 
             box_plot_data.append(mean_final_sol)
 
-        box_ax.boxplot(box_plot_data, labels=evap)
+        box_ax.boxplot(box_plot_data, labels=variables[database]["evap"])
         box_ax.set_title("Base: " + dbname + " - Distribuição dos resultados finais")
         box_ax.set_xlabel("Valor do Evaporação")
         box_ax.set_ylabel("Valor da solução")

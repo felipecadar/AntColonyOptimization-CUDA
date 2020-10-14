@@ -1,10 +1,13 @@
-ACO
+# folders
 results/
+__pycache__
+
+# Files
 *.sh
-a.out
-ACO_parallel
-ACO_old
 *.txt
 *.png
-__pycache__
 *.zip
+
+# Exec
+ACO_full
+ACO_red

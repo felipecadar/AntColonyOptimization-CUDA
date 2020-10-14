@@ -44,7 +44,10 @@ optional arguments:
 
 **Compile**: `make`
 
-**Run**: `./ACO bases_grafos/entrada1.txt 100 50 0.2 1 2 test_exp`
+
+**Run**: 
+- `mkdir -p results/`
+- `./ACO_red bases_grafos/entrada1.txt 100 50 0.2 1 2 test_exp`
 
 **Usage**
 ```

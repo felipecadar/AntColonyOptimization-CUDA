@@ -11,6 +11,18 @@ class bcolors:
     BOLD = '\033[1m'
     UNDERLINE = '\033[4m'
 
+
+
+import errno    
+def mkdir_p(path):
+    try:
+        os.makedirs(path)
+    except OSError as exc:  # Python ≥ 2.5
+        if exc.errno == errno.EEXIST and os.path.isdir(path):
+            pass
+        else:
+            raise
+
 def checkfile(exp_id):
     exp_id_fn = "results/" + exp_id + ".txt"
     if os.path.isfile(exp_id_fn):
@@ -27,12 +39,32 @@ def checkfile(exp_id):
         return False
 
 
-bases = ["bases_grafos/entrada1.txt" , "bases_grafos/entrada2.txt"]
-n_iter = [10, 50, 100, 200]
-n_ants = [10, 50, 200, 300]
-evap = [0.1, 0.3, 0.5, 0.7, 0.9]
-alpha = [0, 1, 2, 3]
-beta = [0, 1, 2, 3]
+
+variables = {
+    "bases_grafos/entrada1.txt" : {
+        "n_iter" : [10, 50, 100, 200],
+        "n_ants" : [10, 50, 200, 300],
+        "evap" : [0.1, 0.3, 0.5, 0.7, 0.9],
+        "alpha" : [1, 2, 3],
+        "beta" : [1, 2, 3],
+    },
+    "bases_grafos/entrada2.txt" : {
+        "n_iter" : [10, 100, 200],
+        "n_ants" : [100, 500, 1000, 2000],
+        "evap" : [0.1, 0.3, 0.5, 0.7, 0.9],
+        "alpha" : [1, 2, 3],
+        "beta" : [1, 2, 3],
+    },
+    "bases_grafos/entrada3.txt" : {
+        "n_iter" : [10, 50, 100, 200],
+        "n_ants" : [100, 500, 1000, 2000],
+        "evap" : [0.1, 0.3, 0.5, 0.7, 0.9],
+        "alpha" : [1, 2, 3],
+        "beta" : [1, 2, 3],
+    },
+}
+
+bases = list(variables.keys())
 REP = range(30)
 
 ## Default Args
@@ -41,6 +73,7 @@ N_ITER= 100
 EVAP= 0.2
 ALPHA= 1
 BETA= 1
+EXEC = "ACO_red"
 
 
 VERIFY = True
@@ -53,18 +86,20 @@ if len(sys.argv) > 1:
     if sys.argv[1] == "c":
         ONLYCHECK = True
 
+if not ONLYCHECK: mkdir_p("run_exps")
+
 ##################### Exp 
 c = 0
 t = 0
 exp_name = "exp_N-ANTS"
-if not ONLYCHECK: exp_file = open("{}.sh".format(exp_name), "w")
 for database in bases:
     dbname = database.split("/")[-1].split(".")[0]
-    for var in n_ants:
+    if not ONLYCHECK: exp_file = open("{}-{}.sh".format(exp_name, dbname), "w")
+    for var in variables[database]["n_ants"]:
         for i in REP:
             t += 1
             exp_id = "exp_N-ANTS_database-{}_rep-{:02d}_var-{:03d}".format(dbname, i, var)
-            cmd = "./ACO {} {} {} {} {} {} {}\n".format(database, N_ITER, var, EVAP, ALPHA, BETA, exp_id)
+            cmd = "./{} {} {} {} {} {} {} {}\n".format(EXEC, database, N_ITER, var, EVAP, ALPHA, BETA, exp_id)
             runned = checkfile(exp_id)
             if runned: c += 1
             if not ONLYCHECK:
@@ -73,7 +108,8 @@ for database in bases:
                         exp_file.write(cmd)
                 else:
                     exp_file.write(cmd)
-if not ONLYCHECK: exp_file.close()
+    if not ONLYCHECK: exp_file.close()
+
 if (c == t): print(bcolors.OKGREEN, end="")
 print("[{:10}] - {} of {}".format(exp_name, c, t))
 if (c == t): print(bcolors.ENDC, end="")
@@ -81,14 +117,14 @@ if (c == t): print(bcolors.ENDC, end="")
 c = 0
 t = 0
 exp_name = "exp_N-ITER"
-if not ONLYCHECK: exp_file = open("{}.sh".format(exp_name), "w")
 for database in bases:
     dbname = database.split("/")[-1].split(".")[0]
-    for var in n_iter:
+    if not ONLYCHECK: exp_file = open("run_exps/{}-{}.sh".format(exp_name, dbname), "w")
+    for var in variables[database]["n_iter"]:
         for i in REP:
             t += 1
             exp_id = "exp_N-ITER_database-{}_rep-{:02d}_var-{:03d}".format(dbname, i, var)
-            cmd = "./ACO {} {} {} {} {} {} {}\n".format(database, var, N_ANTS, EVAP, ALPHA, BETA, exp_id)
+            cmd = "./{} {} {} {} {} {} {} {}\n".format(EXEC, database, var, N_ANTS, EVAP, ALPHA, BETA, exp_id)
             runned = checkfile(exp_id)
             if runned: c += 1
             if not ONLYCHECK:
@@ -97,7 +133,8 @@ for database in bases:
                         exp_file.write(cmd)
                 else:
                     exp_file.write(cmd)
-if not ONLYCHECK: exp_file.close()
+    if not ONLYCHECK: exp_file.close()
+
 if (c == t): print(bcolors.OKGREEN, end="")
 print("[{:10}] - {} of {}".format(exp_name, c, t))
 if (c == t): print(bcolors.ENDC, end="")
@@ -105,14 +142,14 @@ if (c == t): print(bcolors.ENDC, end="")
 c = 0
 t = 0
 exp_name = "exp_ALPHA"
-if not ONLYCHECK: exp_file = open("{}.sh".format(exp_name), "w")
 for database in bases:
     dbname = database.split("/")[-1].split(".")[0]
-    for var in alpha:
+    if not ONLYCHECK: exp_file = open("run_exps/{}-{}.sh".format(exp_name, dbname), "w")
+    for var in variables[database]["alpha"]:
         for i in REP:
             t += 1
             exp_id = "exp_ALPHA_database-{}_rep-{:02d}_var-{:03d}".format(dbname, i, var)
-            cmd = "./ACO {} {} {} {} {} {} {}\n".format(database, N_ITER, N_ANTS, EVAP, var, BETA, exp_id)
+            cmd = "./{} {} {} {} {} {} {} {}\n".format(EXEC, database, N_ITER, N_ANTS, EVAP, var, BETA, exp_id)
             runned = checkfile(exp_id)
             if runned: c += 1
             if not ONLYCHECK:
@@ -121,7 +158,8 @@ for database in bases:
                         exp_file.write(cmd)
                 else:
                     exp_file.write(cmd)
-if not ONLYCHECK: exp_file.close()
+    if not ONLYCHECK: exp_file.close()
+
 if (c == t): print(bcolors.OKGREEN, end="")
 print("[{:10}] - {} of {}".format(exp_name, c, t))
 if (c == t): print(bcolors.ENDC, end="")
@@ -129,14 +167,14 @@ if (c == t): print(bcolors.ENDC, end="")
 c = 0
 t = 0
 exp_name = "exp_BETA"
-if not ONLYCHECK: exp_file = open("{}.sh".format(exp_name), "w")
 for database in bases:
     dbname = database.split("/")[-1].split(".")[0]
-    for var in beta:
+    if not ONLYCHECK: exp_file = open("run_exps/{}-{}.sh".format(exp_name, dbname), "w")
+    for var in variables[database]["beta"]:
         for i in REP:
             t += 1
             exp_id = "exp_BETA_database-{}_rep-{:02d}_var-{:03d}".format(dbname, i, var)
-            cmd = "./ACO {} {} {} {} {} {} {}\n".format(database, N_ITER, N_ANTS, EVAP, ALPHA, var, exp_id)
+            cmd = "./{} {} {} {} {} {} {} {}\n".format(EXEC, database, N_ITER, N_ANTS, EVAP, ALPHA, var, exp_id)
             runned = checkfile(exp_id)
             if runned: c += 1
             if not ONLYCHECK:
@@ -145,7 +183,8 @@ for database in bases:
                         exp_file.write(cmd)
                 else:
                     exp_file.write(cmd)
-if not ONLYCHECK: exp_file.close()
+    if not ONLYCHECK: exp_file.close()
+
 if (c == t): print(bcolors.OKGREEN, end="")
 print("[{:10}] - {} of {}".format(exp_name, c, t))
 if (c == t): print(bcolors.ENDC, end="")
@@ -153,14 +192,14 @@ if (c == t): print(bcolors.ENDC, end="")
 c = 0
 t = 0
 exp_name = "exp_EVAP"
-if not ONLYCHECK: exp_file = open("{}.sh".format(exp_name), "w")
 for database in bases:
     dbname = database.split("/")[-1].split(".")[0]
-    for var in evap:
+    if not ONLYCHECK: exp_file = open("run_exps/{}-{}.sh".format(exp_name, dbname), "w")
+    for var in variables[database]["evap"]:
         for i in REP:
             t += 1
             exp_id = "exp_EVAP_database-{}_rep-{:02d}_var-{:.1f}".format(dbname, i, var)
-            cmd = "./ACO {} {} {} {} {} {} {}\n".format(database, N_ITER, N_ANTS, var, ALPHA, BETA, exp_id)
+            cmd = "./{} {} {} {} {} {} {} {}\n".format(EXEC, database, N_ITER, N_ANTS, var, ALPHA, BETA, exp_id)
             runned = checkfile(exp_id)
             if runned: c += 1
             if not ONLYCHECK:
@@ -169,7 +208,8 @@ for database in bases:
                         exp_file.write(cmd)
                 else:
                     exp_file.write(cmd)
-if not ONLYCHECK: exp_file.close()
+    if not ONLYCHECK: exp_file.close()
+
 if (c == t): print(bcolors.OKGREEN, end="")
 print("[{:10}] - {} of {}".format(exp_name, c, t))
 if (c == t): print(bcolors.ENDC, end="")
