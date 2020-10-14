@@ -291,6 +291,9 @@ int main(int argc, char* argv[]) {
     gpuErrchk(cudaMalloc(&d_sum, N_ANTS * sizeof(int)));  // sums
     
     // Populate Graph
+    for(int i = 0; i < N*N; i++)
+        g[i] = 0;
+
     for(auto it = std::begin(adjList); it != std::end(adjList); ++it) {
         int i = (*it)[0];
         int j = (*it)[1];

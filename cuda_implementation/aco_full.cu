@@ -276,6 +276,10 @@ int main(int argc, char* argv[]) {
     // Populate Graph
     int *g;
     g = (int *)malloc(N * N * sizeof(int));
+
+    for(int i = 0; i < N*N; i++)
+        g[i] = 0;
+
     for(auto it = std::begin(adjList); it != std::end(adjList); ++it) {
         int i = (*it)[0];
         int j = (*it)[1];
