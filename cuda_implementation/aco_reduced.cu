@@ -384,9 +384,7 @@ int main(int argc, char* argv[]) {
 
 
         std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();
-        std::cout << "Best sum: " << best_sum << " - Time difference = " << std::chrono::duration_cast<std::chrono::milliseconds>(end - begin).count() << "[ms]" << std::endl;
-
-        
+        std::cout << "[" << iter << "] " << "Best sum: " << best_sum << " - Time difference = " << std::chrono::duration_cast<std::chrono::milliseconds>(end - begin).count() << "[ms]" << std::endl;
         
     }
     
@@ -396,7 +394,7 @@ int main(int argc, char* argv[]) {
     printf("------------------------------------------------\n[");
     for(int idx_sol = 0; idx_sol < N_EDGES; idx_sol++){
         if(best_sol[idx_sol] == -1) break;
-        printf("%i, ", best_sol[idx_sol]);
+        printf("%i, ", best_sol[idx_sol]+1);
     }
     printf("]\n");
     printf("------------------------------------------------\n");
@@ -405,24 +403,27 @@ int main(int argc, char* argv[]) {
     if(METRICS){
         for(int idx_sol = 0; idx_sol < N_EDGES; idx_sol++){
             if(best_sol[idx_sol] == -1) break;
-            outfile << best_sol[idx_sol] << " ";
+            outfile << best_sol[idx_sol]+1 << " ";
         }
         outfile << std::endl;
         outfile << best_sum << std::endl;
     }
 
+    std::cout << "Checking Solution..." << std::endl;
     int s = 0;
     for(int idx_sol = 1; idx_sol < N_EDGES; idx_sol++){
         int from = best_sol[idx_sol - 1 ];
         int to = best_sol[idx_sol];
         if(to == -1) break;
         s += g[from * N + to];
+        printf("G[%i -> %i] : %i | Sum: %i\n", from, to, g[from * N + to], s);
     }
-
+    
     if(s != best_sum){
         printf("SOLUTION DO NOT MATCH VALUE\n");
         printf("%i vs %i\n", s, best_sum);
     }
+    std::cout << "Done!" << std::endl;
     
     cudaFree(d_sol);
     cudaFree(d_sum);

@@ -66,16 +66,6 @@ def read_exp(fname):
         mean_phero[mean_phero == 0] = np.nan   
         all_solutions[all_solutions == 0] = np.nan
 
-        for idx, r in enumerate(doing):
-            # if idx%40 == 0: print("")
-            if r :
-                print(bcolors.OKGREEN, end="")
-            else:
-                print(bcolors.FAIL, end="")
-            print("*", end="")
-            print(bcolors.ENDC, end="")
-
-
         mean_fig, mean_ax = plt.subplots(figsize=[8,4]) ## Create Figure
         # best_fig, best_ax = plt.subplots(figsize=[8,4]) ## Create Figure
         # worse_fig, worse_ax = plt.subplots(figsize=[8,4]) ## Create Figure
