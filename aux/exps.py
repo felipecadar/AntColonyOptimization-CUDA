@@ -112,7 +112,7 @@ for database in bases:
     if (c == t): print(bcolors.OKGREEN, end="") 
     elif running_now: print(bcolors.WARNING, end="") 
     print("{} - [{:10}] - {} of {}".format(database, exp_name, c, t))
-    if (c == t): print(bcolors.ENDC, end="")
+    print(bcolors.ENDC, end="")
 ##################### Exp 
 exp_name = "exp_N-ITER"
 for database in bases:
@@ -140,7 +140,7 @@ for database in bases:
     if (c == t): print(bcolors.OKGREEN, end="") 
     elif running_now: print(bcolors.WARNING, end="") 
     print("{} - [{:10}] - {} of {}".format(database, exp_name, c, t))
-    if (c == t): print(bcolors.ENDC, end="")
+    print(bcolors.ENDC, end="")
 
 ##################### Exp 
 exp_name = "exp_ALPHA"
@@ -170,7 +170,7 @@ for database in bases:
     if (c == t): print(bcolors.OKGREEN, end="") 
     elif running_now: print(bcolors.WARNING, end="") 
     print("{} - [{:10}] - {} of {}".format(database, exp_name, c, t))
-    if (c == t): print(bcolors.ENDC, end="")
+    print(bcolors.ENDC, end="")
 
 ##################### Exp 
 exp_name = "exp_BETA"
@@ -199,7 +199,7 @@ for database in bases:
     if (c == t): print(bcolors.OKGREEN, end="") 
     elif running_now: print(bcolors.WARNING, end="") 
     print("{} - [{:10}] - {} of {}".format(database, exp_name, c, t))
-    if (c == t): print(bcolors.ENDC, end="")
+    print(bcolors.ENDC, end="")
 ##################### Exp 
 exp_name = "exp_EVAP"
 for database in bases:
@@ -227,4 +227,4 @@ for database in bases:
     if (c == t): print(bcolors.OKGREEN, end="") 
     elif running_now: print(bcolors.WARNING, end="") 
     print("{} - [{:10}] - {} of {}".format(database, exp_name, c, t))
-    if (c == t): print(bcolors.ENDC, end="")
+    print(bcolors.ENDC, end="")
