@@ -412,21 +412,21 @@ int main(int argc, char* argv[]) {
         outfile << best_sum << std::endl;
     }
 
-    std::cout << "Checking Solution..." << std::endl;
-    int s = 0;
-    for(int idx_sol = 1; idx_sol < N_EDGES; idx_sol++){
-        int from = best_sol[idx_sol - 1 ];
-        int to = best_sol[idx_sol];
-        if(to == -1) break;
-        s += g[from * N + to];
-        printf("G[%i -> %i] : %i | Sum: %i\n", from, to, g[from * N + to], s);
-    }
+    // std::cout << "Checking Solution..." << std::endl;
+    // int s = 0;
+    // for(int idx_sol = 1; idx_sol < N_EDGES; idx_sol++){
+    //     int from = best_sol[idx_sol - 1 ];
+    //     int to = best_sol[idx_sol];
+    //     if(to == -1) break;
+    //     s += g[from * N + to];
+    //     printf("G[%i -> %i] : %i | Sum: %i\n", from, to, g[from * N + to], s);
+    // }
     
-    if(s != best_sum){
-        printf("SOLUTION DO NOT MATCH VALUE\n");
-        printf("%i vs %i\n", s, best_sum);
-    }
-    std::cout << "Done!" << std::endl;
+    // if(s != best_sum){
+    //     printf("SOLUTION DO NOT MATCH VALUE\n");
+    //     printf("%i vs %i\n", s, best_sum);
+    // }
+    // std::cout << "Done!" << std::endl;
     
     cudaFree(d_sol);
     cudaFree(d_sum);
