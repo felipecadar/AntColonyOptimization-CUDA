@@ -221,7 +221,6 @@ int main(int argc, char* argv[]) {
     
     int METRICS = 0;
     std::string exp_id;
-    std::cout << " aaaaa " << argc << std::endl;
     if( argc > 7){
         exp_id = std::string(argv[7]);
         METRICS = 1;    
