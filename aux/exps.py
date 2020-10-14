@@ -28,15 +28,12 @@ def checkfile(exp_id):
     if os.path.isfile(exp_id_fn):
         line = subprocess.check_output(['tail', '-1', exp_id_fn])
         line = line.decode("utf-8")
-        if "START" in line:
-            return False
-
         if not line.strip().isnumeric():
-            return False
+            return False, True
 
-        return True
+        return True, False
     else:
-        return False
+        return False, False
 
 
 
@@ -93,6 +90,7 @@ exp_name = "exp_N-ANTS"
 for database in bases:
     c = 0
     t = 0
+    running_now = False
     dbname = database.split("/")[-1].split(".")[0]
     if not ONLYCHECK: exp_file = open("{}-{}.sh".format(exp_name, dbname), "w")
     for var in variables[database]["n_ants"]:
@@ -100,7 +98,8 @@ for database in bases:
             t += 1
             exp_id = "exp_N-ANTS_database-{}_rep-{:02d}_var-{:03d}".format(dbname, i, var)
             cmd = "./{} {} {} {} {} {} {} {}\n".format(EXEC, database, N_ITER, var, EVAP, ALPHA, BETA, exp_id)
-            runned = checkfile(exp_id)
+            runned, r_now = checkfile(exp_id)
+            if r_now: running_now = True
             if runned: c += 1
             if not ONLYCHECK:
                 if VERIFY:
@@ -111,7 +110,7 @@ for database in bases:
     if not ONLYCHECK: exp_file.close()
 
     if (c == t): print(bcolors.OKGREEN, end="") 
-    else: print(bcolors.WARNING, end="") 
+    elif running_now: print(bcolors.WARNING, end="") 
     print("{} - [{:10}] - {} of {}".format(database, exp_name, c, t))
     if (c == t): print(bcolors.ENDC, end="")
 ##################### Exp 
@@ -119,6 +118,7 @@ exp_name = "exp_N-ITER"
 for database in bases:
     c = 0
     t = 0
+    running_now = False
     dbname = database.split("/")[-1].split(".")[0]
     if not ONLYCHECK: exp_file = open("run_exps/{}-{}.sh".format(exp_name, dbname), "w")
     for var in variables[database]["n_iter"]:
@@ -126,7 +126,8 @@ for database in bases:
             t += 1
             exp_id = "exp_N-ITER_database-{}_rep-{:02d}_var-{:03d}".format(dbname, i, var)
             cmd = "./{} {} {} {} {} {} {} {}\n".format(EXEC, database, var, N_ANTS, EVAP, ALPHA, BETA, exp_id)
-            runned = checkfile(exp_id)
+            runned, r_now = checkfile(exp_id)
+            if r_now: running_now = True
             if runned: c += 1
             if not ONLYCHECK:
                 if VERIFY:
@@ -137,7 +138,7 @@ for database in bases:
     if not ONLYCHECK: exp_file.close()
 
     if (c == t): print(bcolors.OKGREEN, end="") 
-    else: print(bcolors.WARNING, end="") 
+    elif running_now: print(bcolors.WARNING, end="") 
     print("{} - [{:10}] - {} of {}".format(database, exp_name, c, t))
     if (c == t): print(bcolors.ENDC, end="")
 
@@ -147,6 +148,7 @@ for database in bases:
     c = 0
     t = 0
 
+    running_now = False
     dbname = database.split("/")[-1].split(".")[0]
     if not ONLYCHECK: exp_file = open("run_exps/{}-{}.sh".format(exp_name, dbname), "w")
     for var in variables[database]["alpha"]:
@@ -154,7 +156,8 @@ for database in bases:
             t += 1
             exp_id = "exp_ALPHA_database-{}_rep-{:02d}_var-{:03d}".format(dbname, i, var)
             cmd = "./{} {} {} {} {} {} {} {}\n".format(EXEC, database, N_ITER, N_ANTS, EVAP, var, BETA, exp_id)
-            runned = checkfile(exp_id)
+            runned, r_now = checkfile(exp_id)
+            if r_now: running_now = True
             if runned: c += 1
             if not ONLYCHECK:
                 if VERIFY:
@@ -165,7 +168,7 @@ for database in bases:
     if not ONLYCHECK: exp_file.close()
 
     if (c == t): print(bcolors.OKGREEN, end="") 
-    else: print(bcolors.WARNING, end="") 
+    elif running_now: print(bcolors.WARNING, end="") 
     print("{} - [{:10}] - {} of {}".format(database, exp_name, c, t))
     if (c == t): print(bcolors.ENDC, end="")
 
@@ -174,6 +177,7 @@ exp_name = "exp_BETA"
 for database in bases:
     c = 0
     t = 0
+    running_now = False
     dbname = database.split("/")[-1].split(".")[0]
     if not ONLYCHECK: exp_file = open("run_exps/{}-{}.sh".format(exp_name, dbname), "w")
     for var in variables[database]["beta"]:
@@ -181,7 +185,8 @@ for database in bases:
             t += 1
             exp_id = "exp_BETA_database-{}_rep-{:02d}_var-{:03d}".format(dbname, i, var)
             cmd = "./{} {} {} {} {} {} {} {}\n".format(EXEC, database, N_ITER, N_ANTS, EVAP, ALPHA, var, exp_id)
-            runned = checkfile(exp_id)
+            runned, r_now = checkfile(exp_id)
+            if r_now: running_now = True
             if runned: c += 1
             if not ONLYCHECK:
                 if VERIFY:
@@ -192,7 +197,7 @@ for database in bases:
     if not ONLYCHECK: exp_file.close()
 
     if (c == t): print(bcolors.OKGREEN, end="") 
-    else: print(bcolors.WARNING, end="") 
+    elif running_now: print(bcolors.WARNING, end="") 
     print("{} - [{:10}] - {} of {}".format(database, exp_name, c, t))
     if (c == t): print(bcolors.ENDC, end="")
 ##################### Exp 
@@ -200,6 +205,7 @@ exp_name = "exp_EVAP"
 for database in bases:
     c = 0
     t = 0
+    running_now = False
     dbname = database.split("/")[-1].split(".")[0]
     if not ONLYCHECK: exp_file = open("run_exps/{}-{}.sh".format(exp_name, dbname), "w")
     for var in variables[database]["evap"]:
@@ -207,7 +213,8 @@ for database in bases:
             t += 1
             exp_id = "exp_EVAP_database-{}_rep-{:02d}_var-{:.1f}".format(dbname, i, var)
             cmd = "./{} {} {} {} {} {} {} {}\n".format(EXEC, database, N_ITER, N_ANTS, var, ALPHA, BETA, exp_id)
-            runned = checkfile(exp_id)
+            runned, r_now = checkfile(exp_id)
+            if r_now: running_now = True
             if runned: c += 1
             if not ONLYCHECK:
                 if VERIFY:
@@ -218,6 +225,6 @@ for database in bases:
     if not ONLYCHECK: exp_file.close()
 
     if (c == t): print(bcolors.OKGREEN, end="") 
-    else: print(bcolors.WARNING, end="") 
+    elif running_now: print(bcolors.WARNING, end="") 
     print("{} - [{:10}] - {} of {}".format(database, exp_name, c, t))
     if (c == t): print(bcolors.ENDC, end="")
