@@ -1,5 +1,8 @@
 # Ant Colony Optimization in CUDA and Python
 
+[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/felipecadar/AntColonyOptimization-CUDA/blob/main/ColabExample.ipynb)
+
+
 This repository contains two implementations of the Ant Colony Optimization algorithm
 
 ## Visualization
