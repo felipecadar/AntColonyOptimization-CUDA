@@ -92,7 +92,7 @@ for database in bases:
     t = 0
     running_now = False
     dbname = database.split("/")[-1].split(".")[0]
-    if not ONLYCHECK: exp_file = open("{}-{}.sh".format(exp_name, dbname), "w")
+    if not ONLYCHECK: exp_file = open("run_exps/{}-{}.sh".format(exp_name, dbname), "w")
     for var in variables[database]["n_ants"]:
         for i in REP:
             t += 1
