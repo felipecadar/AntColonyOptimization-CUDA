@@ -1,4 +1,4 @@
-import sys, os
+import sys, os, glob
 import numpy as np
 import matplotlib.pyplot as plt
 
@@ -66,7 +66,7 @@ def read_exp(fname):
         mean_phero[mean_phero == 0] = np.nan   
         all_solutions[all_solutions == 0] = np.nan
 
-        mean_fig, mean_ax = plt.subplots(figsize=[8,4]) ## Create Figure
+        # mean_fig, mean_ax = plt.subplots(figsize=[8,4]) ## Create Figure
 
         mean1 = np.nanmean(all_solutions, axis=2)
         mean2 = np.nanmean(mean1, axis=0)
@@ -77,18 +77,59 @@ def read_exp(fname):
         min1 = np.nanmin(all_solutions, axis=2)
         min2 = np.nanmin(min1, axis=0)
 
-        mean_ax.plot(mean2, label="mean", color="b")
-        mean_ax.plot(max2, label="max", color="g")
-        mean_ax.plot(min2, label="min", color="r")
+        return mean2, max2, min2
 
-        mean_ax.set_title("Best, Mean and Worse values for each Ant")
-        mean_ax.set_xlabel("Iteration")
-        mean_ax.set_ylabel("Solution Value")
+        # mean_ax.plot(mean2, label="mean", color="b")
+        # mean_ax.plot(max2, label="max", color="g")
+        # mean_ax.plot(min2, label="min", color="r")
 
-        # mean_fig.legend()
-        mean_ax.legend(bbox_to_anchor=(1.05, 1), loc='upper left')
-        mean_fig.tight_layout()
-        plt.show()
+        # mean_ax.set_title("Best, Mean and Worse values for each Ant")
+        # mean_ax.set_xlabel("Iteration")
+        # mean_ax.set_ylabel("Solution Value")
 
-filename = sys.argv[1]
-read_exp(filename)
+        # # mean_fig.legend()
+        # mean_ax.legend(bbox_to_anchor=(1.05, 1), loc='upper left')
+        # mean_fig.tight_layout()
+        # plt.show()
+
+if __name__ == "__main__":
+    files = glob.glob(sys.argv[1])
+    
+    mean_results = None
+    min_results = None
+    max_results = None
+
+    max_of_all = [0]
+    
+    for idx, filename in enumerate(files):
+        mean2, max2, min2 = read_exp(filename)
+
+        if mean_results is None:
+            mean_results = np.zeros([len(files) , mean2.shape[0]])
+            min_results = np.zeros([len(files) , mean2.shape[0]])
+            max_results = np.zeros([len(files) , mean2.shape[0]])
+        
+        if np.max(max2) > np.max(max_of_all):
+            max_of_all = max2
+
+        mean_results[idx] = mean2        
+        max_results[idx] = max2
+        min_results[idx] = min2
+
+    mean_fig, mean_ax = plt.subplots(figsize=[8,4]) ## Create Figure
+
+    mean_ax.plot(np.nanmean(mean_results, axis=0), label="Mean", color="b")
+    mean_ax.plot(np.nanmean(max_results, axis=0), label="Best", color="g")
+    mean_ax.plot(np.nanmean(min_results, axis=0), label="Worse", color="r")
+
+    mean_ax.plot(max_of_all, color="g", alpha=0.2)
+
+    mean_ax.set_title("Best, Mean and Worse values for each Ant")
+    mean_ax.set_xlabel("Iteration")
+    mean_ax.set_ylabel("Solution Value")
+
+    mean_ax.legend(bbox_to_anchor=(1.05, 1), loc='upper left')
+    mean_fig.tight_layout()
+    plt.show()
+
+    print(np.max(max_of_all))
